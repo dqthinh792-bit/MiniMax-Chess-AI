@@ -10,12 +10,29 @@ A fully implemented interactive Chess AI implemented using the MiniMax algorithm
   ![Alt Text](https://media.giphy.com/media/hojJHfOF6Z8XvfHjl2/giphy.gif)
 ## Features
 
-- Color selection
-- Interactive UI using [pygame](https://www.pygame.org/)
-- Configure search depth
-- invalid move prevention 
+- **Game Modes (Chế độ chơi)**:
+  - **Player vs AI (Chơi với máy)**: Challenge the MiniMax AI engine with customizable search depth, playing as either White or Black.
+  - **Two-Player Mode (Chế độ 2 người chơi)**: Local pass-and-play multiplayer mode allowing two human players to compete on the same device without AI moves.
+- **Draw & Stalemate Adjudication (Luật hòa cờ & Stalemate)**:
+  - **Stalemate Detection (Hòa do bế tắc)**: Accurately identifies stalemate conditions (when a player to move has no legal moves and is not in check) and adjudicates the game as a Draw rather than declaring an incorrect winner.
+  - **Full Draw Rules Support**: Detects and enforces official draw conditions including stalemate, insufficient material (không đủ quân chiếu hết), threefold repetition (lặp lại 3 lần), and the 50-move rule.
+- **Move Validation & Assistance**:
+  - Full legal move verification and invalid move prevention powered by [python-chess](https://pypi.org/project/python-chess/).
+  - Visual move indicators (highlighted green dots for valid destination squares).
+- **Interactive UI**: Sleek graphical chessboard, piece sprites, and menu screens powered by [pygame](https://www.pygame.org/).
+- **Configurable AI Engine**:
+  - MiniMax decision tree algorithm with Alpha-Beta pruning optimization.
+  - Customizable search depth and evaluation heuristics (material balance and piece development tables).
 
-  
+## Game Modes & Rules
+
+### 1. Two-Player Mode (Chế độ chơi 2 người)
+In addition to playing against the AI, players can select a 2-Player PvP mode. Both players alternate turns on the same machine (Pass-and-Play), allowing friends to play together while benefiting from full graphical legal move validation.
+
+### 2. Stalemate & Draw Rules (Luật hòa cờ Stalemate)
+In standard chess, the game does not always end in a checkmate:
+- **Stalemate (Hòa cờ bế tắc)**: Occurs when the player whose turn it is to move has no legal moves available and their king is NOT currently in check. The game immediately resolves as a draw (1/2 - 1/2) with an appropriate Game Over draw display.
+- **Other Draw Conditions**: The engine checks for insufficient material, threefold repetition, and the 50-move rule to ensure standard FIDE chess rules are respected.
 
 ## Usage/Examples
 
@@ -66,7 +83,8 @@ This is an optimization algorithm that greatly reduces the number of board state
 
 ## Lessons Learned
 
-The engine evaluates every possible move up to six moves into the future. All the board states after the six moves are analyzed to determine which one has the highest probability of winning. By utilizing the MiniMax algorithm, the engine can then calculate which moves to make. The assumption is that the opposing player would also be making the optimal moves to ensure his/her victory. I then added the Alpha-beta pruning algorithm that reduces the number of board states to evaluate by removing those that are obviously unfavorable.
+The engine evaluates every possible move up to six moves into the future. All the board states after the six moves are analyzed to determine which one has the highest probability of winning. By utilizing the MiniMax algorithm, the engine can then calculate which moves to Allow generating and testing sound effects?
+make. The assumption is that the opposing player would also be making the optimal moves to ensure his/her victory. I then added the Alpha-beta pruning algorithm that reduces the number of board states to evaluate by removing those that are obviously unfavorable.
 Evaluating any given board state is done with the use of an evaluation function. There are many ways to implement such a function, so my goal was to find one that balanced performance with accuracy. Performance is improved by reducing the number of parameters to process while accuracy is improved by increasing it. I set a 10 second limit to the processing time and then went on to find the most efficient evaluation function that I could. The one I finally came up with allowed the engine to evaluate 6 moves ahead.
 
   
