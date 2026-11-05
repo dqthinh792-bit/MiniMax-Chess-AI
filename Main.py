@@ -128,7 +128,10 @@ def main():
                         if piece and piece.color==board.turn and human_turn:
                             selected=square; legal=[m for m in board.legal_moves if m.from_square==square]
                     else:
-                        move=next((m for m in legal if m.to_square==square),None)
+                        # Promote to a queen by default on the last rank.
+                        move=next((m for m in legal if m.to_square==square and m.promotion==chess.QUEEN),None)
+                        if move is None:
+                            move=next((m for m in legal if m.to_square==square),None)
                         if move:
                             board.push(move); last_move=move
                             if clocks[not board.turn] is not None: clocks[not board.turn]+=increment
@@ -144,7 +147,9 @@ def main():
                 # Drag-and-drop: a piece selected on mouse-down may be released on a legal square.
                 if state=="game" and selected is not None and review is None:
                     target=ui.square_at(event.pos)
-                    move=next((m for m in legal if m.to_square==target),None)
+                    move=next((m for m in legal if m.to_square==target and m.promotion==chess.QUEEN),None)
+                    if move is None:
+                        move=next((m for m in legal if m.to_square==target),None)
                     if move:
                         board.push(move); last_move=move
                         if clocks[not board.turn] is not None: clocks[not board.turn]+=increment
@@ -166,7 +171,14 @@ def main():
             ui.screen.blit(prompt,prompt.get_rect(center=(520,410))); py.display.flip()
             for event in py.event.get():
                 if event.type==py.QUIT: running=False
-                elif event.type==py.KEYDOWN and event.key in (py.K_RETURN,py.K_r): state="menu"; status=""
+                elif event.type==py.KEYDOWN and event.key==py.K_RETURN:
+                    state="menu"; status=""
+                elif event.type==py.KEYDOWN and event.key==py.K_r:
+                    board=chess.Board()
+                    clocks={chess.WHITE:initial,chess.BLACK:initial}
+                    last_move=None; selected=None; legal=[]; review=None
+                    hint=None; evaluation=None; status=""
+                    state="game"; last_tick=time.monotonic()
         ui.clock.tick(60)
     ui.close()
 
