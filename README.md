@@ -3,7 +3,7 @@
 Local desktop chess built with Python, Pygame and python-chess.
 
 ## Run
-Install dependencies with pip install -r requirements.txt, then run python Main.py from the repository folder.
+On Windows, double-click `run_chess.bat`. Alternatively, open a terminal in the repository folder and run `python -m pip install -r requirements.txt` followed by `python main.py`. The lowercase `main.py` launcher starts the existing `Main.py` application. Use the same Python command for installation and launch.
 
 ## Features
 - Human vs AI and local two-player modes.
