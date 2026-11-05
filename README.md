@@ -9,7 +9,7 @@ Install dependencies with pip install -r requirements.txt, then run python Main.
 - Human vs AI and local two-player modes.
 - Easy random, Medium capture/check-priority and Hard Minimax/alpha-beta AI.
 - Optional 1+0, 3+2, 5+0 and 10+0 clocks with increment, or untimed play.
-- Legal move indicators, selected-square, last-move and checked-king highlighting.
+- Legal move indicators, selected-square, last-move and checked-king highlighting; click-to-move and drag-and-drop.
 - SAN move history with Left/Right/Home/End position review.
 - Captured-piece summary, evaluation hint and best-move hint.
 - Save/load PGN with S/L to saved_game.pgn; board themes with T; restart with R.
