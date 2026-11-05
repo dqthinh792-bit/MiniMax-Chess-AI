@@ -140,6 +140,15 @@ def main():
                                 selected=square; legal=[m for m in board.legal_moves if m.from_square==square]
                             else: selected=None; legal=[]
                 else: selected=None; legal=[]
+            elif state=="game" and event.type==py.MOUSEBUTTONUP and event.button==1:
+                # Drag-and-drop: a piece selected on mouse-down may be released on a legal square.
+                if state=="game" and selected is not None and review is None:
+                    target=ui.square_at(event.pos)
+                    move=next((m for m in legal if m.to_square==target),None)
+                    if move:
+                        board.push(move); last_move=move
+                        if clocks[not board.turn] is not None: clocks[not board.turn]+=increment
+                        selected=None; legal=[]; hint=None; evaluation=None; status=""
             elif state=="game" and event.type==py.MOUSEBUTTONDOWN and event.button==3:
                 selected=None; legal=[]
 
