@@ -1,295 +1,104 @@
 import pygame as py
 import chess
+from pathlib import Path
 
-class DisplayBoard():
+class DisplayBoard:
+    WIDTH, HEIGHT = 1040, 760
+    BOARD_X, BOARD_Y, SQ = 28, 62, 80
+    THEMES = [((238,216,181),(126,87,58)),((232,235,239),(119,149,86)),((235,222,204),(105,125,145))]
 
     def __init__(self, board):
-
-        # General Variables
-        self.run = False
-        self.intro = True
-        self.game_over = False
-        self.dim = 500
-        self.boardPos = {}
-        self.boardLayout = {}
-        self.show_moves_surf_list = []
-        self.selected_square = None
-        self.square_to_move_too = None
-        self.player_color = None
-        self.clock = py.time.Clock()
-        self.board = board
-        self.fen = board.fen()
-
-        # General pygame Init
-
         py.init()
-        self.win = py.display.set_mode((self.dim, self.dim))
-        py.display.set_caption("Chess")
-        # Create a surface for the chessboard itself
-        self.chessBoard = py.image.load("Image\Board.jpg").convert_alpha()
-        self.chessBoard = py.transform.scale(self.chessBoard, (self.dim, self.dim))
+        self.screen=py.display.set_mode((self.WIDTH,self.HEIGHT))
+        py.display.set_caption("MiniMax Chess AI")
+        self.clock=py.time.Clock()
+        self.font=py.font.SysFont("segoeui",20)
+        self.small=py.font.SysFont("segoeui",15)
+        self.large=py.font.SysFont("segoeui",34,bold=True)
+        self.theme_index=0
+        self.sprites={}
+        root=Path(__file__).resolve().parent/"Image"
+        for symbol in "pnbrqk":
+            for color,suffix in ((chess.WHITE,"lt"),(chess.BLACK,"dt")):
+                try:
+                    img=py.image.load(str(root/("Chess_"+symbol+suffix+"60.png"))).convert_alpha()
+                    self.sprites[(symbol,color)]=py.transform.smoothscale(img,(62,62))
+                except (py.error,FileNotFoundError):
+                    pass
 
-        self.show_moves_surf = py.Surface((50, 50), py.SRCALPHA, 32)
-        py.draw.circle(self.show_moves_surf, (0, 200, 0, 100), (25, 25), 20, 0)
+    def square_at(self,pos):
+        col=(pos[0]-self.BOARD_X)//self.SQ
+        row=(pos[1]-self.BOARD_Y)//self.SQ
+        return chess.square(col,7-row) if 0<=col<8 and 0<=row<8 else None
 
-        self.boardlayout_init()
+    def square_rect(self,sq):
+        return py.Rect(self.BOARD_X+chess.square_file(sq)*self.SQ,
+                       self.BOARD_Y+(7-chess.square_rank(sq))*self.SQ,self.SQ,self.SQ)
 
-        #Setup is only ran once to set the initial
-        self.update(self.board)
+    def line(self,text,x,y,color=(225,228,234)):
+        self.screen.blit(self.small.render(str(text),True,color),(x,y))
 
-
-    def boardlayout_init(self):
-
-        # Initialize the boardLayout dict
-        for x in range(8):
-            for y in range(8):
-                # boardPos Initialized once only saves coordinate data about where the actual blocks are
-                self.boardPos[str(chr(97 + x) + str(y + 1))] = [x * 51.5 + 46, 405 - y * 51]
-
-                # Save the position in Chess Notation where different pieces are located wil dynamically change every move.
-                # This only initializes the names of the different items in Dictionary
-                self.boardLayout[str(chr(97 + x) + str(y + 1))] = None
-
-    def update(self, board):
-        # Clear the boardLayout Dict so new one can be created
-        for x in range(8):
-            for y in range(8):
-                self.boardLayout[str(chr(97 + x) + str(y + 1))] = None
-
-        self.board = board
-        self.fen = board.fen()
-
-        #Gets rid of unnecessary data at end of string
-        boardString = str(self.fen)[0:str(self.fen).find(' ')]
-        boardString = boardString + '/'
-
-        #Basic String manipulation to determine where every piece on the board should be positioned
-        for y in range(8, 0, -1):
-            dash = boardString.find('/')
-            rawCode = boardString[0:dash]
-            boardString = boardString[dash + 1:len(boardString)]
-
-            alphabetCounter = 97
-            for char in rawCode:
-                if char.isdigit():
-                    alphabetCounter += int(char)
-                else:
-                    self.boardLayout[str(chr(alphabetCounter)) + str(y)] = self.pieceData(char)
-                    alphabetCounter +=1
-        self.update_screen()
-
-
-    def update_screen(self):
-        # This function updates the screen should be run every time a change is made to the board state
-        self.win.blit(self.chessBoard, (0, 0))
-        # Display all pieces in BoardLayout
-        for num in self.boardLayout:
-            if self.boardLayout[num] != None:
-                self.win.blit(self.boardLayout[num].render(), (self.boardPos[num][0], self.boardPos[num][1]))
-        # Displays circles that show possible moves
-        if self.show_moves_surf_list != []:
-            for num in self.show_moves_surf_list:
-                self.win.blit(self.show_moves_surf, (num[0], num[1]))
-
-        py.display.update()
-        self.clock.tick(10)
-
-    def update_possible_moves(self):
-        # This functions updates where the littler circles appear that show player where certain piece can move
-        if self.selected_square != None:
-            self.show_moves_surf_list.clear()
-            lg = self.board.legal_moves
-            for pos in lg:
-                if str(pos)[0:2] == self.selected_square:
-                    self.show_moves_surf_list.append((self.boardPos[str(pos)[2:4]][0], self.boardPos[str(pos)[2:4]][1]))
-
-    def pieceData(self, piece):
-
-        # This class gets referenced when initializing new Pieces using Pieces class
-        if piece == 'p': return Piece("Pawn", "B")
-        elif piece == 'r': return Piece("Rook", "B")
-        elif piece == 'n': return Piece("Knight", "B")
-        elif piece == 'b': return Piece("Bishop", "B")
-        elif piece == 'k': return Piece("King", "B")
-        elif piece == 'q': return Piece("Queen", "B")
-
-        elif piece == 'P': return Piece("Pawn", "W")
-        elif piece == 'R': return Piece("Rook", "W")
-        elif piece == 'N': return Piece("Knight", "W")
-        elif piece == 'B': return Piece("Bishop", "W")
-        elif piece == 'K': return Piece("King", "W")
-        elif piece == 'Q': return Piece("Queen", "W")
-
-
-    # If the player Left Click on block the piece on that block is the one to be moved.
-    # If there was a piece already selected  the second  click is the block the selected piece should move to.
-    # Except if the second click is on a Piece of same cloro then that piece becomes the Pieced to be movesd
-    def square_select(self, pos):
-        x_board_pos = ((pos[0] - 45) // 50)
-        y_board_pos = -((pos[1] - 405) // 50) + 1
-        # Set piece to be moved
-        if self.selected_square == None:
-            self.square_to_move_too = None
-            self.selected_square = str(chr(97 + x_board_pos) + str(y_board_pos))
-            self.update_possible_moves()
-            return None
-
-        else:
-            self.square_to_move_too = str(chr(97 + x_board_pos) + str(y_board_pos))
-            result = str(self.selected_square + self.square_to_move_too)
-            for move in self.board.legal_moves:
-                if str(move) == str(result + "q"):
-                    self.remove_square_select()
-                    return str(result + "q")
-                elif str(move) == result:
-                    self.remove_square_select()
-                    return result
-
-            if self.boardLayout[str(chr(97 + x_board_pos) + str(y_board_pos))] != None:
-                self.square_to_move_too = None
-                self.selected_square = str(chr(97 + x_board_pos) + str(y_board_pos))
-                self.update_possible_moves()
-                return None
-
-    # If RightClick the current selected Piece is set to None.
-    def remove_square_select(self):
-        self.selected_square = None
-        self.square_to_move_too = None
-        self.show_moves_surf_list = []
-
-
-############################################################################################################################
-# From here is only UI stuff to display menus and buttons ect.
-
-    def main_menu(self):
-
-        red = (200, 0, 0)
-        green = (0, 200, 0)
-
-        bright_red = (255, 0, 0)
-        bright_green = (0, 255, 0)
-
-        while self.intro:
-            for event in py.event.get():
-                # print(event)
-                if event.type == py.QUIT:
-                    py.quit()
-
-            self.win.fill((255,255,255))
-            largeText = py.font.SysFont("comicsansms", 115)
-            TextSurf, TextRect = self.text_objects("Chess", largeText)
-            TextRect.center = ((self.dim / 2), (self.dim / 2 - 100))
-            self.win.blit(TextSurf, TextRect)
-
-            self.button("WHITE", 50, 300, 100, 50, green, bright_green, 1)
-            self.button("BLACK", 350, 300, 100, 50, green, bright_green, 2)
-            self.button("Quit", 225, 400, 80, 50, red, bright_red, 3)
-
-            py.display.update()
-            self.clock.tick(15)
-
-    def game_over_menu(self):
-
-        red = (200, 0, 0)
-        green = (0, 200, 0)
-
-        bright_red = (255, 0, 0)
-        bright_green = (0, 255, 0)
-
-        while self.game_over:
-            for event in py.event.get():
-                # print(event)
-                if event.type == py.QUIT:
-                    py.quit()
-
-            self.win.fill((255,255,255,100))
-            largeText = py.font.SysFont("comicsansms", 90)
-            mediumText = py.font.SysFont("comicsansms", 50)
-            TextSurfMian, TextRectMain = self.text_objects("Game Over", largeText)
-            TextRectMain.center = ((self.dim / 2), (self.dim / 2 - 120))
-            self.win.blit(TextSurfMian, TextRectMain)
-
-            if self.board.turn == chess.WHITE:
-                TextSurf, TextRect = self.text_objects("Black Won", mediumText)
+    def draw(self,board,selected=None,legal_moves=(),last_move=None,history=(),
+             clocks=None,mode="Player vs AI",difficulty="Hard",status="",hint=None,
+             evaluation=None,captured=None,history_index=None):
+        self.screen.fill((25,30,39))
+        light,dark=self.THEMES[self.theme_index]
+        py.draw.rect(self.screen,(12,15,21),(self.BOARD_X-5,self.BOARD_Y-5,650,650),border_radius=8)
+        targets={m.to_square for m in legal_moves}
+        for sq in chess.SQUARES:
+            rect=self.square_rect(sq)
+            color=light if (chess.square_file(sq)+chess.square_rank(sq))%2==0 else dark
+            py.draw.rect(self.screen,color,rect)
+            if last_move and sq in (last_move.from_square,last_move.to_square):
+                overlay=py.Surface((80,80),py.SRCALPHA); overlay.fill((255,220,0,75)); self.screen.blit(overlay,rect)
+            if selected==sq: py.draw.rect(self.screen,(40,145,230),rect,4)
+            if sq in targets:
+                py.draw.circle(self.screen,(20,145,65),rect.center,32,5) if board.piece_at(sq) else py.draw.circle(self.screen,(20,125,60),rect.center,10)
+        if board.is_check() and board.king(board.turn) is not None:
+            py.draw.rect(self.screen,(210,45,45),self.square_rect(board.king(board.turn)),5)
+        glyph={"K":"♔","Q":"♕","R":"♖","B":"♗","N":"♘","P":"♙","k":"♚","q":"♛","r":"♜","b":"♝","n":"♞","p":"♟"}
+        for sq,piece in board.piece_map().items():
+            rect=self.square_rect(sq); img=self.sprites.get((piece.symbol().lower(),piece.color))
+            if img: self.screen.blit(img,img.get_rect(center=rect.center))
             else:
-                TextSurf, TextRect = self.text_objects("White Won", mediumText)
+                label=self.large.render(glyph[piece.symbol()],True,(250,250,250) if piece.color else (20,20,20))
+                self.screen.blit(label,label.get_rect(center=rect.center))
+        for i in range(8):
+            self.line(chess.FILE_NAMES[i],self.BOARD_X+i*80+36,706)
+            self.line(8-i,8,self.BOARD_Y+i*80+32)
+        x=710
+        self.screen.blit(self.large.render("CHESS AI",True,(245,245,245)),(x,28))
+        self.line("Mode: "+mode,x,82); self.line("AI: "+difficulty,x,111)
+        self.line("White to move" if board.turn else "Black to move",x,140,(115,210,150))
+        if clocks: self.line("White "+clocks[0]+"   Black "+clocks[1],x,170,(245,220,120))
+        self.line("MOVE HISTORY",x,216,(120,190,245))
+        start=max(0,len(history)-14)
+        for idx,san in enumerate(history[start:],start):
+            self.line((str(idx//2+1)+". " if idx%2==0 else "    ")+san,x,246+(idx-start)*23)
+        self.line("CAPTURED",x,585,(120,190,245))
+        if captured:
+            self.line("White: "+captured[0],x,613); self.line("Black: "+captured[1],x,640)
+        if evaluation is not None: self.line("Eval (White +): "+str(round(evaluation/100,2)),x,670)
+        if hint: self.line("Hint: "+hint,x,697,(250,220,120))
+        self.line(status or "H hint | ←/→ review | S save | L load | T theme",x,730,(190,195,205))
+        py.display.flip()
+        self.clock.tick(60)
 
-            TextRect.center = ((self.dim / 2), (self.dim / 2) - 20)
-            self.win.blit(TextSurf, TextRect)
+    def draw_menu(self,mode,difficulty,time_control,player_color):
+        self.screen.fill((25,30,39))
+        title=self.large.render("MINIMAX CHESS AI",True,(245,245,245))
+        self.screen.blit(title,title.get_rect(center=(520,105)))
+        sub=self.font.render("Choose a game and start playing",True,(190,200,215))
+        self.screen.blit(sub,sub.get_rect(center=(520,155)))
+        for label,value,y in [("Mode",mode,230),("Difficulty",difficulty,300),("Clock",time_control,370),("Play as",player_color,440)]:
+            self.screen.blit(self.font.render(label+":  "+value,True,(245,245,245)),(300,y))
+            self.line("click to cycle",650,y+3,(150,160,175))
+        rect=py.Rect(390,535,260,62); py.draw.rect(self.screen,(42,145,95),rect,border_radius=10)
+        self.screen.blit(self.font.render("START GAME",True,(255,255,255)),self.font.render("START GAME",True,(255,255,255)).get_rect(center=rect.center))
+        self.line("Modes: Player vs AI / Two Players     Difficulty: Easy / Medium / Hard",225,640)
+        self.line("Clock: Untimed / 1+0 / 3+2 / 5+0 / 10+0",330,670)
+        py.display.flip()
+        return rect
 
-            self.button("Play Again", 225, 300, 100, 50, green, bright_green, 4)
-            self.button("Quit", 225, 400, 100, 50, red, bright_red, 3)
-
-            py.display.update()
-            self.clock.tick(15)
-
-    def button(self, msg, x, y, w, h, ic, ac, action=None):
-        mouse = py.mouse.get_pos()
-        click = py.mouse.get_pressed()
-        if x + w > mouse[0] > x and y + h > mouse[1] > y:
-            py.draw.rect(self.win, ac, (x, y, w, h))
-
-            if click[0] == 1 and action != None:
-                if action == 1:
-                    self.player_color = "W"
-                    self.run = True
-                    self.intro = False
-                    self.game_over = False
-                elif action == 2:
-                    self.player_color = "B"
-                    self.run = True
-                    self.intro = False
-                    self.game_over = False
-                elif action == 3:
-                    py.quit()
-                elif action == 4:
-                    self.run = False
-                    self.intro = True
-                    self.game_over = False
-
-        else:
-            py.draw.rect(self.win, ic, (x, y, w, h))
-
-        smallText = py.font.SysFont("comicsansms", 20)
-        textSurf, textRect = self.text_objects(msg, smallText)
-        textRect.center = ((x + (w / 2)), (y + (h / 2)))
-        self.win.blit(textSurf, textRect)
-
-    def text_objects(self, text, font):
-        textSurface = font.render(text, True, (0,0,0))
-        return textSurface, textSurface.get_rect()
-
-# This class is used to create Pieces and assign a Surface and Image to them
-class Piece():
-
-    def __init__(self, name, color):
-        self.name = name
-        self.color = color
-        self.dim = 45
-
-        if (self.color == "W") or (self.color == "White"):
-            if self.name != "Knight":
-                self.pieceSurface = py.image.load("Image\Chess_"+self.name.lower()[0]+"lt60.png")
-            else:
-                self.pieceSurface = py.image.load("Image\Chess_nlt60.png")
-        else:
-            if self.name != "Knight":
-                self.pieceSurface = py.image.load("Image\Chess_" + self.name.lower()[0] + "dt60.png")
-            else:
-                self.pieceSurface = py.image.load("Image\Chess_ndt60.png")
-
-        self.pieceSurface = py.transform.scale(self.pieceSurface, (self.dim, self.dim))
-
-
-    def render(self):
-        return self.pieceSurface
-
-
-
-
-
-
-
-
-
-
+    def close(self):
+        py.quit()
